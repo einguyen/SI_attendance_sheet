@@ -256,9 +256,9 @@ td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-s
 // ============================================================
 const SUPABASE_URL = "https://jdvjvscmqzauwceinsqn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_10at49mBrYTIJD7inCZdUA_POq1PcJk";
-let supabase;
+let supabaseClient;
 try{
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }catch(e){
   document.getElementById('app').innerHTML =
     '<div style="padding:40px;font-family:monospace;color:#C85A25;">Failed to connect to Supabase: ' +
@@ -456,7 +456,7 @@ async function handleSubmit(){
   };
 
   try{
-    const { error } = await supabase.from(TABLE).insert(record);
+    const { error } = await supabaseClient.from(TABLE).insert(record);
     if(error) throw error;
     submitting = false;
     form = { leader:"", name:"", cwid:"", email:"" };
@@ -520,7 +520,7 @@ function renderLogin(){
 async function loadLeaderRecords(name){
   const slug = slugify(name);
   try{
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from(TABLE)
       .select('*')
       .eq('leader_slug', slug)
@@ -650,7 +650,7 @@ function closeDeleteModal(){
 async function performDelete(leader, id){
   const slug = slugify(leader);
   try{
-    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    const { error } = await supabaseClient.from(TABLE).delete().eq('id', id);
     if(error) throw error;
   }catch(e){
     closeDeleteModal();
