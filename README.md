@@ -1,0 +1,57 @@
+# SI Attendance
+
+A lightweight attendance sign-in app for Supplemental Instruction (SI) sessions. Students pick their SI leader, fill out their info, and sign digitally — SI leaders and admins can then review attendance by leader and by day.
+
+## Features
+
+- **Student sign-in** — dropdown to select SI leader, plus name, CWID, and CSUF email fields
+- **Digital signature pad** — students sign with mouse or touch, right on the page
+- **Automatic date tracking** — every submission is tagged with the current day, no manual entry needed
+- **Admin dashboard** — password-gated view with a tab per SI leader, records grouped by day (most recent first)
+- **Delete entries** — hover over any row in the admin view to reveal a delete button, with a confirmation step before anything is removed
+- **Shared, persistent data** — powered by Supabase, so submissions from any device show up for every admin
+
+## Tech stack
+
+- Plain HTML, CSS, and JavaScript — no build step, no framework, no npm install
+- [Supabase](https://supabase.com) (Postgres + REST API) for data storage
+- Deployable as a static site on [Vercel](https://vercel.com) (or any static host)
+
+## Project structure
+
+```
+si_attendance.html    → the entire app (single file)
+supabase_setup.sql    → run once in Supabase to create the database table
+DEPLOY_README.md      → step-by-step Supabase + Vercel setup walkthrough
+README.md             → this file
+```
+
+## Quick start
+
+1. **Set up the database.** Create a free [Supabase](https://supabase.com) project, then run `supabase_setup.sql` in the Supabase SQL Editor to create the `attendance_records` table.
+2. **Connect the app to your database.** Open `si_attendance.html` and paste your Supabase Project URL and anon/publishable key into the config block near the top of the `<script>` section.
+3. **Deploy.** Push this repo to GitHub, then import it into [Vercel](https://vercel.com/new) (framework preset: **Other**, no build command needed). Every push to `main` will auto-deploy.
+
+Full details, screenshots-friendly steps, and troubleshooting are in [`DEPLOY_README.md`](./DEPLOY_README.md).
+
+## Configuration
+
+A few things you'll likely want to customize, all near the top of `si_attendance.html`:
+
+| What | Where |
+|---|---|
+| List of SI leaders | `SI_LEADERS` array |
+| Admin password | `ADMIN_PASSWORD` constant |
+| Supabase connection | `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants |
+| Required email domain | `validate()` function (currently requires `fullerton.edu`) |
+| CWID length | `validate()` function (currently 6–9 digits) |
+
+## Security notes
+
+- The admin password protects the **page**, not the database directly. Since this app uses Supabase's public anon/publishable key in the browser, the Row Level Security policies in `supabase_setup.sql` are what actually control access — by default they allow anyone with the key to insert, read, and delete records.
+- This is a reasonable setup for an internal tool shared with a known group (SI leaders and their students), but the app URL shouldn't be publicized beyond that group, and it shouldn't be used to store sensitive data.
+- If you need stronger access control later (e.g., only the app's own server can write to the database), that requires adding a backend API layer in front of Supabase — happy to help build that out if it becomes necessary.
+
+## License
+
+Internal tool — add a license here if you plan to share or open-source this.
