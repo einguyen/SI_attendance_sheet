@@ -256,7 +256,15 @@ td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-s
 // ============================================================
 const SUPABASE_URL = "https://jdvjvscmqzauwceinsqn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_10at49mBrYTIJD7inCZdUA_POq1PcJk";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabase;
+try{
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}catch(e){
+  document.getElementById('app').innerHTML =
+    '<div style="padding:40px;font-family:monospace;color:#C85A25;">Failed to connect to Supabase: ' +
+    (e && e.message ? e.message : e) + '</div>';
+  throw e;
+}
 const TABLE = "attendance_records";
 // ============================================================
 
@@ -655,7 +663,14 @@ async function performDelete(leader, id){
   if(badge) badge.textContent = recs.length ? " ("+recs.length+")" : "";
 }
 
-render();
+try{
+  render();
+}catch(e){
+  document.getElementById('app').innerHTML =
+    '<div style="padding:40px;font-family:monospace;color:#C85A25;">App failed to start: ' +
+    (e && e.message ? e.message : e) + '</div>';
+  console.error(e);
+}
 </script>
 </body>
 </html>
