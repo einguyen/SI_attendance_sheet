@@ -198,7 +198,44 @@ thead th{
 }
 tbody td{padding:11px 12px;font-size:13.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
 tbody tr:last-child td{border-bottom:none;}
+tbody tr{position:relative;}
 tbody tr:hover{background:var(--paper);}
+td.actions-cell{width:36px;padding:0;text-align:center;}
+.del-btn{
+  width:26px;height:26px;border-radius:50%;border:1px solid var(--line);
+  background:var(--white);color:var(--ink-soft);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;opacity:0;transition:opacity .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
+  margin:0 auto;
+}
+tbody tr:hover .del-btn{opacity:1;}
+.del-btn:hover{background:var(--orange-deep);border-color:var(--orange-deep);color:var(--white);}
+
+/* ---------- delete confirm modal ---------- */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(27,42,74,.45);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:20px;
+}
+.modal-card{
+  background:var(--white);border-radius:6px;max-width:360px;width:100%;
+  padding:26px 26px 22px;box-shadow:0 24px 60px -20px rgba(27,42,74,.5);
+}
+.modal-card h3{font-family:'Fraunces',serif;color:var(--navy);margin:0 0 10px;font-size:19px;}
+.modal-card p{color:var(--ink-soft);font-size:13.5px;line-height:1.5;margin:0 0 22px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;}
+.modal-cancel{
+  background:none;border:1px solid var(--line);color:var(--ink-soft);
+  padding:9px 16px;border-radius:5px;font-family:'Inter',sans-serif;font-size:13.5px;
+  font-weight:600;cursor:pointer;
+}
+.modal-cancel:hover{border-color:var(--navy-soft);color:var(--navy);}
+.modal-delete{
+  background:var(--orange-deep);border:none;color:var(--white);
+  padding:9px 16px;border-radius:5px;font-family:'Inter',sans-serif;font-size:13.5px;
+  font-weight:600;cursor:pointer;
+}
+.modal-delete:hover{background:#a8481c;}
 td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);}
 .sig-thumb{height:26px;border:1px solid var(--line);border-radius:3px;background:var(--white);}
 .empty-state{
@@ -211,7 +248,18 @@ td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-s
 <body>
 <div class="app" id="app"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// ============================================================
+// SUPABASE CONFIG — paste your project's values here.
+// Find these in Supabase: Project Settings → API
+// ============================================================
+const SUPABASE_URL = "https://jdvjvscmqzauwceinsqn.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "sb_publishable_10at49mBrYTIJD7inCZdUA_POq1PcJk";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const TABLE = "attendance_records";
+// ============================================================
+
 const SI_LEADERS = [
   "Max Kwatcher",
   "Syon Chau",
@@ -226,7 +274,6 @@ const SI_LEADERS = [
 const ADMIN_PASSWORD = "sileaders2026";
 
 function slugify(name){ return name.toLowerCase().replace(/[^a-z]/g,""); }
-function storageKey(name){ return "attendance-" + slugify(name); }
 
 let view = "landing"; // landing | success | login | admin
 let activeTab = SI_LEADERS[0];
@@ -389,25 +436,20 @@ async function handleSubmit(){
   submitting = true; render();
 
   const record = {
-    date: dateDisplay,
-    isoDate: isoDate,
-    name: form.name.trim(),
+    leader: submittedLeader,
+    leader_slug: slugify(submittedLeader),
+    student_name: form.name.trim(),
     cwid: form.cwid.trim(),
     email: form.email.trim(),
     signature: signatureDataURL,
+    iso_date: isoDate,
+    date_label: dateDisplay,
     ts: Date.now()
   };
 
-  const key = storageKey(submittedLeader);
   try{
-    let existing = [];
-    try{
-      const res = await window.storage.get(key, true);
-      if(res && res.value) existing = JSON.parse(res.value);
-    }catch(e){ existing = []; }
-    existing.push(record);
-    const result = await window.storage.set(key, JSON.stringify(existing), true);
-    if(!result) throw new Error("save failed");
+    const { error } = await supabase.from(TABLE).insert(record);
+    if(error) throw error;
     submitting = false;
     form = { leader:"", name:"", cwid:"", email:"" };
     hasSignature = false;
@@ -469,12 +511,25 @@ function renderLogin(){
 
 async function loadLeaderRecords(name){
   const slug = slugify(name);
-  if(cache[slug]) return cache[slug];
   try{
-    const res = await window.storage.get(storageKey(name), true);
-    cache[slug] = res && res.value ? JSON.parse(res.value) : [];
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('*')
+      .eq('leader_slug', slug)
+      .order('ts', { ascending: true });
+    if(error) throw error;
+    cache[slug] = (data || []).map(row => ({
+      id: row.id,
+      name: row.student_name,
+      cwid: row.cwid,
+      email: row.email,
+      signature: row.signature,
+      isoDate: row.iso_date,
+      date: row.date_label,
+      ts: Number(row.ts)
+    }));
   }catch(e){
-    cache[slug] = [];
+    cache[slug] = cache[slug] || [];
   }
   return cache[slug];
 }
@@ -533,18 +588,71 @@ async function renderTabPanel(){
         <td class="mono">${r.cwid}</td>
         <td class="mono">${r.email}</td>
         <td><img class="sig-thumb" src="${r.signature}" alt="signature"></td>
+        <td class="actions-cell">
+          <button class="del-btn" data-id="${r.id}" data-name="${r.name.replace(/"/g,'&quot;')}" data-date="${group.date.replace(/"/g,'&quot;')}" title="Delete entry">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+        </td>
       </tr>
     `).join("");
     return `
       <div class="day-group">
         <div class="day-heading">${group.date} · ${group.items.length} ${group.items.length===1?'student':'students'}</div>
         <table>
-          <thead><tr><th>Student Name</th><th>CWID</th><th>CSUF Email</th><th>Signature</th></tr></thead>
+          <thead><tr><th>Student Name</th><th>CWID</th><th>CSUF Email</th><th>Signature</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
     `;
   }).join("");
+
+  panel.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      openDeleteModal(activeTab, btn.dataset.id, btn.dataset.name, btn.dataset.date);
+    };
+  });
+}
+
+function openDeleteModal(leader, id, name, dateLabel){
+  closeDeleteModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'deleteModalOverlay';
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <h3>Delete this entry?</h3>
+      <p>${name}'s attendance record for ${dateLabel} will be permanently removed. This can't be undone.</p>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancel">Cancel</button>
+        <button class="modal-delete" id="modalDelete">Delete</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('modalCancel').onclick = closeDeleteModal;
+  overlay.addEventListener('click', e=>{ if(e.target === overlay) closeDeleteModal(); });
+  document.getElementById('modalDelete').onclick = ()=> performDelete(leader, id);
+}
+
+function closeDeleteModal(){
+  const overlay = document.getElementById('deleteModalOverlay');
+  if(overlay) overlay.remove();
+}
+
+async function performDelete(leader, id){
+  const slug = slugify(leader);
+  try{
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if(error) throw error;
+  }catch(e){
+    closeDeleteModal();
+    return; // leave data untouched if the delete failed
+  }
+  closeDeleteModal();
+  await renderTabPanel();
+  const recs = await loadLeaderRecords(leader);
+  const badge = document.getElementById('count-'+slug);
+  if(badge) badge.textContent = recs.length ? " ("+recs.length+")" : "";
 }
 
 render();
