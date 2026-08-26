@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SI Attendance</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --paper:#FAF7F2;
+  --paper-dark:#F1EAD9;
+  --ink:#24272B;
+  --ink-soft:#6B6459;
+  --navy:#1B2A4A;
+  --navy-soft:#2E3F63;
+  --orange:#E8743B;
+  --orange-deep:#C85A25;
+  --sage:#6B8F71;
+  --line:#D8D3C8;
+  --white:#FFFEFB;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:820px;margin:0 auto;padding:0 20px 60px;}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:28px 0 8px;
+}
+.brand{display:flex;flex-direction:column;gap:2px;}
+.brand .eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--orange-deep);font-weight:600;
+}
+.brand h1{
+  font-family:'Fraunces',serif;
+  font-size:28px;font-weight:600;margin:2px 0 0;color:var(--navy);
+  letter-spacing:-0.01em;
+}
+.admin-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px;letter-spacing:.05em;
+  background:transparent;color:var(--navy-soft);
+  border:1px solid var(--line);border-radius:20px;
+  padding:8px 16px;cursor:pointer;white-space:nowrap;margin-top:4px;
+  transition:all .15s ease;
+}
+.admin-btn:hover{background:var(--navy);color:var(--white);border-color:var(--navy);}
+
+/* ---------- date strip ---------- */
+.date-strip{
+  display:flex;align-items:center;gap:10px;
+  margin:6px 0 26px;color:var(--ink-soft);
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+.date-strip .dot{width:6px;height:6px;border-radius:50%;background:var(--sage);flex:none;}
+
+/* ---------- clipboard card ---------- */
+.clip-wrap{position:relative;margin-top:26px;}
+.clip{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  width:64px;height:34px;z-index:3;
+}
+.card{
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:6px;
+  box-shadow:0 1px 0 var(--line), 0 18px 40px -24px rgba(27,42,74,.35);
+  padding:38px 30px 30px;
+  position:relative;
+}
+.card::before{
+  content:"";position:absolute;top:0;left:24px;right:24px;height:2px;
+  background:repeating-linear-gradient(90deg,var(--line) 0 6px, transparent 6px 12px);
+}
+
+.field{margin-bottom:20px;}
+.field label{
+  display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:7px;
+}
+.field select, .field input{
+  width:100%;font-family:'Inter',sans-serif;font-size:15px;
+  padding:12px 13px;border:1.5px solid var(--line);border-radius:5px;
+  background:var(--paper);color:var(--ink);
+  transition:border-color .15s ease, background .15s ease;
+}
+.field select:focus, .field input:focus{
+  outline:none;border-color:var(--orange);background:var(--white);
+}
+.field select{appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%236B6459' stroke-width='1.6' fill='none' fill-rule='evenodd'/></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;
+}
+.err{color:var(--orange-deep);font-size:12.5px;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
+
+.sig-box{
+  border:1.5px dashed var(--line);border-radius:5px;background:var(--paper);
+  padding:10px;
+}
+.sig-box canvas{width:100%;height:120px;display:block;touch-action:none;cursor:crosshair;border-radius:3px;background:var(--white);}
+.sig-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.sig-hint{font-size:12px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;}
+.clear-btn{
+  background:none;border:none;color:var(--navy-soft);font-size:12px;
+  font-family:'IBM Plex Mono',monospace;cursor:pointer;text-decoration:underline;
+  padding:2px;
+}
+
+.submit-btn{
+  width:100%;padding:15px;margin-top:8px;
+  background:var(--navy);color:var(--white);border:none;border-radius:5px;
+  font-family:'Inter',sans-serif;font-weight:600;font-size:15px;letter-spacing:.01em;
+  cursor:pointer;transition:background .15s ease, transform .1s ease;
+}
+.submit-btn:hover{background:var(--orange-deep);}
+.submit-btn:active{transform:scale(.99);}
+
+/* ---------- success ---------- */
+.success{
+  text-align:center;padding:50px 20px 30px;
+}
+.success .check{
+  width:56px;height:56px;border-radius:50%;background:var(--sage);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
+}
+.success h2{font-family:'Fraunces',serif;font-size:24px;color:var(--navy);margin:0 0 8px;}
+.success p{color:var(--ink-soft);font-size:14px;margin:0 0 26px;}
+.again-btn{
+  background:transparent;border:1.5px solid var(--navy);color:var(--navy);
+  padding:11px 22px;border-radius:5px;font-family:'Inter',sans-serif;font-weight:600;
+  cursor:pointer;font-size:14px;
+}
+.again-btn:hover{background:var(--navy);color:var(--white);}
+
+/* ---------- admin ---------- */
+.login-wrap{display:flex;justify-content:center;padding-top:70px;}
+.login-card{
+  background:var(--white);border:1px solid var(--line);border-radius:6px;
+  padding:36px 32px;width:100%;max-width:340px;
+  box-shadow:0 18px 40px -24px rgba(27,42,74,.35);
+}
+.login-card h2{font-family:'Fraunces',serif;color:var(--navy);margin:0 0 4px;font-size:22px;}
+.login-card .sub{color:var(--ink-soft);font-size:13px;margin:0 0 22px;}
+.back-link{
+  background:none;border:none;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;
+  font-size:12px;cursor:pointer;padding:0;margin-bottom:18px;text-decoration:underline;
+}
+
+.admin-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:26px 0 4px;
+}
+.admin-header h1{font-family:'Fraunces',serif;color:var(--navy);font-size:24px;margin:0;}
+.logout-btn{
+  background:none;border:1px solid var(--line);color:var(--ink-soft);
+  padding:7px 14px;border-radius:20px;font-family:'IBM Plex Mono',monospace;
+  font-size:12px;cursor:pointer;
+}
+.logout-btn:hover{border-color:var(--orange-deep);color:var(--orange-deep);}
+
+.tabs{
+  display:flex;gap:4px;overflow-x:auto;margin:18px 0 0;
+  border-bottom:1.5px solid var(--line);padding-bottom:0;
+}
+.tab{
+  flex:none;padding:10px 16px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+  color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;
+  white-space:nowrap;transition:color .15s ease;
+}
+.tab.active{color:var(--navy);border-bottom-color:var(--orange);font-weight:600;}
+.tab .count{color:var(--orange-deep);margin-left:4px;}
+
+.tab-panel{padding-top:22px;}
+.day-group{margin-bottom:26px;}
+.day-heading{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--navy-soft);margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.day-heading::after{content:"";flex:1;height:1px;background:var(--line);}
+
+table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--line);border-radius:5px;overflow:hidden;}
+thead th{
+  text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);
+  background:var(--paper-dark);padding:10px 12px;border-bottom:1px solid var(--line);
+}
+tbody td{padding:11px 12px;font-size:13.5px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--paper);}
+td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);}
+.sig-thumb{height:26px;border:1px solid var(--line);border-radius:3px;background:var(--white);}
+.empty-state{
+  text-align:center;padding:50px 20px;color:var(--ink-soft);
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+.loading{text-align:center;padding:60px 20px;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:13px;}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+const SI_LEADERS = [
+  "Max Kwatcher",
+  "Syon Chau",
+  "Emmanuel DeGuzman",
+  "Justin Ngo",
+  "Eileen Nguyen",
+  "Solivan Hiep",
+  "Esther Anne Ricardo",
+  "Kendall Culhane",
+  "Dianella Sy"
+];
+const ADMIN_PASSWORD = "sileaders2026";
+
+function slugify(name){ return name.toLowerCase().replace(/[^a-z]/g,""); }
+function storageKey(name){ return "attendance-" + slugify(name); }
+
+let view = "landing"; // landing | success | login | admin
+let activeTab = SI_LEADERS[0];
+let cache = {}; // slug -> records array, loaded lazily for admin
+
+const today = new Date();
+function localISODate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+const isoDate = localISODate(today);
+const dateDisplay = today.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+
+let form = { leader:"", name:"", cwid:"", email:"" };
+let errors = {};
+let hasSignature = false;
+let drawing = false;
+let lastX=0, lastY=0;
+let canvasEl = null;
+let submitting = false;
+
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+const app = document.getElementById('app');
+
+function render(){
+  if(view==="landing") renderLanding();
+  else if(view==="success") renderSuccess();
+  else if(view==="login") renderLogin();
+  else if(view==="admin") renderAdmin();
+}
+
+function renderLanding(){
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand">
+        <span class="eyebrow">Supplemental Instruction</span>
+        <h1>Attendance Sign-In</h1>
+      </div>
+      <button class="admin-btn" id="adminBtn">Admin</button>
+    </div>
+    <div class="date-strip"><span class="dot"></span> Recording attendance for ${dateDisplay}</div>
+
+    <div class="clip-wrap">
+      <svg class="clip" viewBox="0 0 64 34"><rect x="18" y="0" width="28" height="14" rx="4" fill="#B8BCC4"/><rect x="10" y="10" width="44" height="20" rx="7" fill="#8C919C"/><rect x="10" y="10" width="44" height="20" rx="7" fill="none" stroke="#6B6F78" stroke-width="1"/></svg>
+      <div class="card">
+        <div class="field">
+          <label for="leaderSelect">SI Leader</label>
+          <select id="leaderSelect">
+            <option value="" ${form.leader===""?"selected":""} disabled>Select your SI leader</option>
+            ${SI_LEADERS.map(l=>`<option value="${l}" ${form.leader===l?"selected":""}>${l}</option>`).join("")}
+          </select>
+          ${errors.leader?`<div class="err">${errors.leader}</div>`:""}
+        </div>
+        <div class="field">
+          <label for="nameInput">Student Name</label>
+          <input id="nameInput" type="text" placeholder="First Last" value="${form.name.replace(/"/g,'&quot;')}">
+          ${errors.name?`<div class="err">${errors.name}</div>`:""}
+        </div>
+        <div class="field">
+          <label for="cwidInput">Student ID (CWID)</label>
+          <input id="cwidInput" type="text" inputmode="numeric" placeholder="000000000" value="${form.cwid.replace(/"/g,'&quot;')}">
+          ${errors.cwid?`<div class="err">${errors.cwid}</div>`:""}
+        </div>
+        <div class="field">
+          <label for="emailInput">CSUF Email</label>
+          <input id="emailInput" type="email" placeholder="you@csu.fullerton.edu" value="${form.email.replace(/"/g,'&quot;')}">
+          ${errors.email?`<div class="err">${errors.email}</div>`:""}
+        </div>
+        <div class="field">
+          <label>Signature</label>
+          <div class="sig-box">
+            <canvas id="sigCanvas"></canvas>
+          </div>
+          <div class="sig-row">
+            <span class="sig-hint">Sign with mouse or finger</span>
+            <button class="clear-btn" id="clearSig">Clear</button>
+          </div>
+          ${errors.signature?`<div class="err">${errors.signature}</div>`:""}
+        </div>
+        <button class="submit-btn" id="submitBtn">${submitting?"Submitting…":"Submit Attendance"}</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('adminBtn').onclick = ()=>{ view="login"; render(); };
+  document.getElementById('leaderSelect').onchange = e=>{ form.leader = e.target.value; };
+  document.getElementById('nameInput').oninput = e=>{ form.name = e.target.value; };
+  document.getElementById('cwidInput').oninput = e=>{ form.cwid = e.target.value; };
+  document.getElementById('emailInput').oninput = e=>{ form.email = e.target.value; };
+  document.getElementById('clearSig').onclick = clearSignature;
+  document.getElementById('submitBtn').onclick = handleSubmit;
+
+  setupCanvas();
+}
+
+function setupCanvas(){
+  canvasEl = document.getElementById('sigCanvas');
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvasEl.getBoundingClientRect();
+  canvasEl.width = rect.width * ratio;
+  canvasEl.height = 120 * ratio;
+  const ctx = canvasEl.getContext('2d');
+  ctx.scale(ratio, ratio);
+  ctx.strokeStyle = "#1B2A4A";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  function pos(e){
+    const r = canvasEl.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+    return [cx, cy];
+  }
+  function start(e){ e.preventDefault(); drawing=true; [lastX,lastY]=pos(e); }
+  function move(e){
+    if(!drawing) return; e.preventDefault();
+    const [x,y]=pos(e);
+    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(x,y); ctx.stroke();
+    [lastX,lastY]=[x,y]; hasSignature = true;
+  }
+  function end(){ drawing=false; }
+
+  canvasEl.addEventListener('mousedown', start);
+  canvasEl.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvasEl.addEventListener('touchstart', start, {passive:false});
+  canvasEl.addEventListener('touchmove', move, {passive:false});
+  canvasEl.addEventListener('touchend', end);
+}
+
+function clearSignature(){
+  const ctx = canvasEl.getContext('2d');
+  ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
+  hasSignature = false;
+  errors.signature = null;
+  render();
+}
+
+function validate(){
+  errors = {};
+  if(!form.leader) errors.leader = "Please select your SI leader.";
+  if(!form.name.trim()) errors.name = "Please enter your name.";
+  if(!form.cwid.trim() || !/^\d{6,9}$/.test(form.cwid.trim())) errors.cwid = "Enter a valid CWID (6–9 digits).";
+  if(!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errors.email = "Enter a valid email address.";
+  else if(!/fullerton\.edu$/i.test(form.email.trim())) errors.email = "Please use your CSUF email address.";
+  if(!hasSignature) errors.signature = "Please sign to confirm attendance.";
+  return Object.keys(errors).length === 0;
+}
+
+async function handleSubmit(){
+  if(!validate()){ render(); return; }
+
+  // Capture the signature now, before re-rendering rebuilds the canvas element
+  const signatureDataURL = canvasEl.toDataURL('image/png');
+  const submittedLeader = form.leader;
+
+  submitting = true; render();
+
+  const record = {
+    date: dateDisplay,
+    isoDate: isoDate,
+    name: form.name.trim(),
+    cwid: form.cwid.trim(),
+    email: form.email.trim(),
+    signature: signatureDataURL,
+    ts: Date.now()
+  };
+
+  const key = storageKey(submittedLeader);
+  try{
+    let existing = [];
+    try{
+      const res = await window.storage.get(key, true);
+      if(res && res.value) existing = JSON.parse(res.value);
+    }catch(e){ existing = []; }
+    existing.push(record);
+    const result = await window.storage.set(key, JSON.stringify(existing), true);
+    if(!result) throw new Error("save failed");
+    submitting = false;
+    form = { leader:"", name:"", cwid:"", email:"" };
+    hasSignature = false;
+    view = "success";
+    render();
+  }catch(err){
+    submitting = false;
+    errors.submit = "Something went wrong saving your attendance. Please try again.";
+    render();
+  }
+}
+
+function renderSuccess(){
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand">
+        <span class="eyebrow">Supplemental Instruction</span>
+        <h1>Attendance Sign-In</h1>
+      </div>
+      <button class="admin-btn" id="adminBtn">Admin</button>
+    </div>
+    <div class="success">
+      <div class="check"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2>You're signed in</h2>
+      <p>Attendance recorded for ${dateDisplay}.</p>
+      <button class="again-btn" id="againBtn">Sign in another student</button>
+    </div>
+  `;
+  document.getElementById('adminBtn').onclick = ()=>{ view="login"; render(); };
+  document.getElementById('againBtn').onclick = ()=>{ view="landing"; render(); };
+}
+
+function renderLogin(){
+  app.innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <button class="back-link" id="backBtn">← Back to sign-in</button>
+        <h2>Admin Login</h2>
+        <p class="sub">Access all SI leaders' attendance records.</p>
+        <div class="field">
+          <label for="pwInput">Password</label>
+          <input id="pwInput" type="password" placeholder="••••••••">
+          <div id="loginErr" class="err" style="display:none;">Incorrect password.</div>
+        </div>
+        <button class="submit-btn" id="loginBtn">Log In</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').onclick = ()=>{ view="landing"; render(); };
+  const pw = document.getElementById('pwInput');
+  const tryLogin = ()=>{
+    if(pw.value === ADMIN_PASSWORD){ view="admin"; render(); }
+    else { document.getElementById('loginErr').style.display = "block"; }
+  };
+  document.getElementById('loginBtn').onclick = tryLogin;
+  pw.addEventListener('keydown', e=>{ if(e.key==="Enter") tryLogin(); });
+  pw.focus();
+}
+
+async function loadLeaderRecords(name){
+  const slug = slugify(name);
+  if(cache[slug]) return cache[slug];
+  try{
+    const res = await window.storage.get(storageKey(name), true);
+    cache[slug] = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    cache[slug] = [];
+  }
+  return cache[slug];
+}
+
+function renderAdmin(){
+  app.innerHTML = `
+    <div class="admin-header">
+      <h1>SI Attendance Records</h1>
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+    <div class="tabs" id="tabs">
+      ${SI_LEADERS.map(l=>`<div class="tab ${l===activeTab?'active':''}" data-leader="${l}">${l}<span class="count" id="count-${slugify(l)}"></span></div>`).join("")}
+    </div>
+    <div class="tab-panel" id="panel"><div class="loading">Loading records…</div></div>
+  `;
+  document.getElementById('logoutBtn').onclick = ()=>{ view="landing"; render(); };
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.onclick = ()=>{ activeTab = t.dataset.leader; render(); };
+  });
+  renderTabPanel();
+  SI_LEADERS.forEach(async l=>{
+    const recs = await loadLeaderRecords(l);
+    const badge = document.getElementById('count-'+slugify(l));
+    if(badge) badge.textContent = recs.length ? " ("+recs.length+")" : "";
+  });
+}
+
+async function renderTabPanel(){
+  const panel = document.getElementById('panel');
+  const records = await loadLeaderRecords(activeTab);
+  if(!panel) return;
+
+  if(!records.length){
+    panel.innerHTML = `<div class="empty-state">No attendance recorded yet for ${activeTab}.</div>`;
+    return;
+  }
+
+  const byDate = {};
+  records.forEach(r=>{
+    // Derive the grouping key from the record's actual timestamp rather than
+    // the stored date string, so same-day entries always merge together
+    // even if some were saved before a date-formatting fix.
+    const d = new Date(r.ts);
+    const key = localISODate(d);
+    const label = d.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric', year:'numeric'});
+    if(!byDate[key]) byDate[key] = { date:label, items:[] };
+    byDate[key].items.push(r);
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+
+  panel.innerHTML = dates.map(d=>{
+    const group = byDate[d];
+    const rows = group.items.sort((a,b)=>a.ts-b.ts).map(r=>`
+      <tr>
+        <td>${r.name}</td>
+        <td class="mono">${r.cwid}</td>
+        <td class="mono">${r.email}</td>
+        <td><img class="sig-thumb" src="${r.signature}" alt="signature"></td>
+      </tr>
+    `).join("");
+    return `
+      <div class="day-group">
+        <div class="day-heading">${group.date} · ${group.items.length} ${group.items.length===1?'student':'students'}</div>
+        <table>
+          <thead><tr><th>Student Name</th><th>CWID</th><th>CSUF Email</th><th>Signature</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+}
+
+render();
+</script>
+</body>
+</html>
